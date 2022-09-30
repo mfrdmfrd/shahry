@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<odoo>
+    <data>
+
+         <record id="view_res_partner" model="ir.ui.view">
+            <field name="name">res.partner.inherit.form</field>
+            <field name="model">res.partner</field> 
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="priority" eval="50"/>
+            <field name="arch" type="xml">
+                <field name="property_account_receivable_id" position="replace">
+                    <field name="property_account_receivable_id" string = 'Princible Account'/>
+                    <field name = 'interest_account_id' />
+                </field>
+                <field name="vat" position="after">
+                    <field name = 'is_tax_registeerd'/>
+                    <field name = 'is_pre_payment'/>
+                    <field name = 'commission_type'/>
+                    <field name = 'commission_period'/>
+                    <field name = 'bank_name'/>
+                    <field name = 'account_name'/>
+                    <field name = 'branch_name'/>
+                    <field name = 'account_number'/>
+                    <field name = 'swift'/>
+                    <field name = 'iban'/>
+                    <field name = 'tax_registertion'/>
+                </field>
+            </field>
+        </record>
+        
+    </data> 
+</odoo>
