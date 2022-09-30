@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_card_contract,access_card_contract,model_card_contract,base.group_user,1,1,1,1
+access_card_purchase,access_card_purchase,model_card_purchase,base.group_user,1,1,1,1
+access_card_purchase_i,access_card_purchase_i,model_card_purchase_installment,base.group_user,1,1,1,1

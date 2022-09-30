@@ -1,0 +1,96 @@
+<odoo>
+    <data>
+
+    <record id="card_purchase_tree" model="ir.ui.view">
+        <field name="name">card.purchase.tree</field>
+        <field name="model">card.purchase</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name" />  
+                <field name="customer_id" /> 
+                <field name="total_installments_amount"/> 
+                <field name="contract_id" />  
+                <field name="installment_type" />                
+                <field name="start_date" />                
+                <field name = 'state'/>                
+            </tree>
+        </field>
+    </record>
+
+    <record id="card_purchase_form" model="ir.ui.view">
+        <field name="name">card.purchase.form</field>
+        <field name="model">card.purchase</field>
+        <field name="arch" type="xml">
+            <form string="Security Worker">
+                <header>
+                    <button name = 'running' string = 'Run' type = 'object' states = 'draft'/>
+                    <button name = 'create_bill' string = 'Create Bill' type = 'object' states = 'running'/>
+                    <button name = 'create_invoice' string = 'Create Invoice' type = 'object' states = 'running'/>
+                    <field name = 'state' widget = 'statusbar'/>
+                </header>
+                <sheet>
+                     <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object" icon="fa-book" name="show_bill"  attrs="{'invisible': [('count_bill', '=', 0)]}">
+                            <field name="count_bill" widget="statinfo" string="Bills"/>
+                        </button>
+                       <button class="oe_stat_button" type="object" icon="fa-book" name="show_invoice"  attrs="{'invisible': [('count_invoice', '=', 0)]}">
+                            <field name="count_invoice" widget="statinfo"  string="Invoices"/>
+                        </button>
+                    </div>
+                    <group>
+                            <group>
+                                <field name="name" readonly = '1'/>  
+                                <field name="customer_id" attrs = "{'readonly':[('state','!=','draft')]}"/>  
+                                <field name="contract_id" attrs = "{'readonly':[('state','!=','draft')]}"/>  
+                                <field name="installment_type" attrs = "{'readonly':[('state','!=','draft')]}"/>                
+                                <field name="start_date" attrs = "{'readonly':[('state','!=','draft')]}"/> 
+                                <field name="installment_product_id" attrs = "{'readonly':[('state','!=','draft')]}"/> 
+                                <field name="intrest_product_id" attrs = "{'readonly':[('state','!=','draft')]}"/> 
+                             </group>
+                             <group>                
+                                <field name="total_installments_amount" attrs = "{'readonly':[('state','!=','draft')]}"/>                 
+                                <field name="number_of_installments" attrs = "{'readonly':[('state','!=','draft')]}"/>  
+                                <field name="benefit_rate" widget = 'percentage'/>  
+                                <field name="benefit_rate_amount" />  
+                                <field name="installment_amount" />                 
+                                <field name="penalty_amount" attrs = "{'readonly':[('state','!=','draft')]}"/>  
+                            </group>
+                    </group>
+                    <notebook attrs = "{'invisible' : [('state','=','draft')]}">
+                        <page name="installment" string="Installments">
+                            <field name = 'installment_ids' readonly = '1'>
+                                <tree editable = 'bottom'>
+                                    <field name = 'due_date'/>
+                                    <field name = 'amount'/>
+                                    <field name = 'benefit_rate_amount'/>
+                                    <field name = 'actual_fees'/>
+                                    <field name = 'penalty_amount'/>
+                                    <field name = 'actual_amount'/>
+                                    <field name = 'payment_reference'/>
+                                    <field name = 'paid_amount'/>
+                                    <field name = 'due_amount'/>
+                                    <field name = 'payment_status'/>
+                                    <button name = 'pay' string = 'Pay' attrs = "{'invisible' : [('payment_status','=','paid')]}" type = 'object'/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="card_purchase_menu_action" model="ir.actions.act_window">
+        <field name="name">Card purchase</field>
+        <field name="res_model">card.purchase</field>
+        <field name="view_mode">tree,form</field>
+        <field
+            name="view_ids"
+            eval="[(5, 0, 0),
+                (0, 0, {'view_mode': 'tree', 'view_id': ref('card_purchase_tree')}),
+                (0, 0, {'view_mode': 'form', 'view_id': ref('card_purchase_form')})]"
+        />
+    </record>
+        
+
+    </data>
+</odoo>

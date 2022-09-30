@@ -1,0 +1,63 @@
+<odoo>
+    <data>
+
+    <record id="card_contract_tree" model="ir.ui.view">
+        <field name="name">card.contract.tree</field>
+        <field name="model">card.contract</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name" />  
+                <field name="customer_id" />  
+                <field name="start_date" />  
+                <field name="end_date" />                
+                <field name="signing_date" />                
+                <field name="benefit_rate" widget = 'percentage'/>                
+                <field name="credit_limit" />                
+            </tree>
+        </field>
+    </record>
+
+    <record id="card_contract_form" model="ir.ui.view">
+        <field name="name">card.contract.form</field>
+        <field name="model">card.contract</field>
+        <field name="arch" type="xml">
+            <form string="Security Worker">
+                <header>
+                    <button name = 'confirm' string = 'Confirm' type = 'object' states = 'draft'/>
+                    <button name = 'cancel' string = 'Cancel' type = 'object' states = 'confirmed'/>
+                    <field name = 'state' widget = 'statusbar'/>
+                </header>
+                <sheet>
+                    <group>
+                            <group>
+                                <field name="name" readonly = '1'/>  
+                                <field name="customer_id" attrs = "{'readonly':[('state','!=','draft')]}"/>  
+                                <field name="start_date" attrs = "{'readonly':[('state','!=','draft')]}"/>  
+                                <field name="end_date" attrs = "{'readonly':[('state','!=','draft')]}"/>                
+                                <field name="signing_date" attrs = "{'readonly':[('state','!=','draft')]}"/>
+                             </group>
+                             <group>                
+                                <field name="benefit_rate" widget = 'percentage' attrs = "{'readonly':[('state','!=','draft')]}"/>                
+                                <field name="credit_limit" attrs = "{'readonly':[('state','!=','draft')]}"/>  
+                                <field name="actual_credit_limit" attrs = "{'invisible':[('state','=','draft')]}" readonly = '1'/>                 
+                            </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="card_contract_menu_action" model="ir.actions.act_window">
+        <field name="name">Card Contract</field>
+        <field name="res_model">card.contract</field>
+        <field name="view_mode">tree,form</field>
+        <field
+            name="view_ids"
+            eval="[(5, 0, 0),
+                (0, 0, {'view_mode': 'tree', 'view_id': ref('card_contract_tree')}),
+                (0, 0, {'view_mode': 'form', 'view_id': ref('card_contract_form')})]"
+        />
+    </record>
+        
+
+    </data>
+</odoo>

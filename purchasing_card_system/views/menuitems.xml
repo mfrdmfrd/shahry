@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <data>
+    
+            <menuitem id="parent_menu" name="Card Purchase" >
+                <menuitem
+                    id="contract_menu"
+                    name="Card Contract"
+                    action = 'card_contract_menu_action'/>
+                <menuitem
+                    id="purchase_menu"
+                    name="Card Purchase"
+                    action = 'card_purchase_menu_action'/>
+            </menuitem>
+    
+    </data>
+    
+
+</odoo>
