@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="direct_expense_tree" model="ir.ui.view">
+            <field name="name">direct_expense_tree</field>
+            <field name="model">direct.expense</field>
+            <field name="arch" type="xml">
+                <tree string="Direct Expenses">
+                    <field name="name"/>
+                    <field name="date"/>
+                    <field name="move_notes" string="البيان"/>
+                    <field name="cash_id"/>
+                    <field name="move_id"/>
+                    <field name="state"/>
+                    <field name="type"/>
+                </tree>
+            </field>
+        </record>
+        <record id="direct_expense_form" model="ir.ui.view">
+            <field name="name">direct_expense_view</field>
+            <field name="model">direct.expense</field>
+            <field name="arch" type="xml">
+                <form string="Direct Expense">
+                    <header>
+                        <button name="action_confirm" string="Approve" class="oe_highlight" states="draft" type="object"/>
+                        <button name="action_post" string="Post" class="oe_highlight" states="approve" type="object"/>
+                        <button name="action_cancel" string="Cancel" class="oe_highlight" states="posted" type="object"/>
+                        <button name="action_set_draft" string="Set to draft" class="oe_highlight" states="approve,cancel,posted" type="object"/>
+<!--                        <button name="print_check_out"-->
+<!--                                attrs="{'invisible': [('type', '=', 'in_invoice')]}"-->
+<!--                                class="oe_highlight" string="طباعة" type="object"/>-->
+<!--                        <button name="print_check_in"-->
+<!--                                attrs="{'invisible': [('type', '=', 'out_invoice')]}"-->
+<!--                                class="oe_highlight" string="طباعة" type="object"/>-->
+                        <field name="state" widget="statusbar" statusbar_visible="" statusbar_colors="{'KEY_IS_STATE':'VALUE_IS_COLOR'}"/>
+                    </header>
+                    <sheet>
+                        <group>
+                          <group>
+                              <field name="name" force_save="1"/>
+                              <field name="cash_id" options="{'no_create': True, 'no_create_edit':True, 'no_open': True}"/>
+                              <field name="currency_type" invisible="1"/>
+                              <label for="currency_id" attrs="{'invisible': [('currency_type', '=', 'l')]}"/>
+                              <div class="o_row" attrs="{'invisible': [('currency_type', '=', 'l')]}">
+                                  <field name="currency_id" readonly="1" nolabel="1" force_save="1"/>
+                                  <field name="manual_currency_exchange_rate" nolabel="1"/>
+                              </div>
+                              <field name="description" string="المستفيد"/>
+                              <field name="income_type" attrs="{'invisible': [('type', '=', 'out_invoice')]}"/>
+                              <field name="income_serial" attrs="{'invisible': [('type', '=', 'out_invoice')]}"/>
+                              <field name="income_department" attrs="{'invisible': [('type', '=', 'out_invoice')]}"/>
+                              <field name="journal_type" invisible="1"/>
+                              <field name="company_id" invisible="1"/>
+                          </group>
+                          <group>
+                              <field name="date"/>
+                              <field name="ref"/>
+                              <field name="type" invisible="1"/>
+                              <field name="move_id"/>
+                              <field name="move_notes" string="البيان"/>
+                          </group>
+                        </group>
+                        <notebook>
+                            <page string="Lines">
+                                <field name="line_ids" context="{'default_direct_expense_id': id}" nolabel="1" attrs="{'readonly': [('state', '!=', 'draft')]}">
+                                    <tree editable="bottom">
+                                        <field name="name" invisible="1"/>
+                                        <field name="direct_expense_id" invisible="1"/>
+                                        <field name="account_id"/>
+                                        <field name="analytic_tag_ids" groups="analytic.group_analytic_tags" widget="many2many_tags" optional="hide"/>
+                                        <field name="analytic_account_id" groups="analytic.group_analytic_accounting" optional="hide"/>
+                                        <field name="description" string="المستفيد"/>
+                                        <field name="amount"/>
+                                        <field name="tax_id" widget="many2many_tags"/>
+                                        <field name="partner_id"/>
+                                        <field name="amount_taxed" string="Total" readonly="1" force_save="1"/>
+                                    </tree>
+                                </field>
+                                <group class="oe_subtotal_footer">
+                                    <field name="amount_untaxed"/>
+                                    <field name="total_tax" nolabel="1" colspan="2"/>
+                                    <field name="amount_total" class="oe_subtotal_footer_separator"/>
+                                </group>
+                            </page>
+                            <page string="Journal Entry">
+                                <field name="move_line_ids" nolabel="1">
+                                    <tree>
+                                        <field name="account_id"/>
+                                        <field name="analytic_tag_ids" groups="analytic.group_analytic_tags" widget="many2many_tags" optional="hide"/>
+                                        <field name="analytic_account_id" groups="analytic.group_analytic_accounting" optional="hide"/>
+                                        <field name="debit"/>
+                                        <field name="credit"/>
+                                    </tree>
+                                </field>
+                                <group class="oe_subtotal_footer">
+                                    <field name="amount_untaxed"/>
+                                    <field name="total_tax" nolabel="1" colspan="2"/>
+                                    <field name="amount_total" class="oe_subtotal_footer_separator"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>
+                        <field name="activity_ids" widget="mail_activity"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+        <record id="direct_expense_in_action" model="ir.actions.act_window">
+            <field name="name">Cash In</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">direct.expense</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('type', '=', 'in_invoice')]</field>
+            <field name="context">{'default_type': 'in_invoice'}</field>
+        </record>
+        <record id="direct_expense_out_action" model="ir.actions.act_window">
+            <field name="name">Cash Out</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">direct.expense</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('type', '=', 'out_invoice')]</field>
+            <field name="context">{'default_type': 'out_invoice'}</field>
+        </record>
+        <menuitem id="direct_expense_menu" name="Cash Moves" parent="account.menu_finance_entries" sequence="0"/>
+        <menuitem id="direct_expense_in_menu" name="Cash In" parent="cash_management.direct_expense_menu"
+                  action="direct_expense_in_action" sequence="0"/>
+        <menuitem id="direct_expense_out_menu" name="Cash Out" parent="cash_management.direct_expense_menu"
+                  action="direct_expense_out_action" sequence="1"/>
+<!--        <menuitem id="sales_direct_expense_in_menu" name="ايرادات" parent="account_accountant.menu_accounting"-->
+<!--                  action="direct_expense_in_action" sequence="100"/>-->
+<!--        <menuitem id="sales_direct_expense_out_menu" name="مصروفات" parent="account_accountant.menu_accounting"-->
+<!--                  action="direct_expense_out_action" sequence="200"/>-->
+<!--        <menuitem id="menu_action_move_out_invoice_type"-->
+<!--                  name="Invoices"-->
+<!--                  parent="account.menu_finance_receivables"-->
+<!--                  action="account.action_move_out_invoice_type" sequence="0"/>-->
+<!--        <menuitem id="account.menu_action_move_out_invoice_type"-->
+<!--                  groups="account.group_account_manager"/>-->
+
+<!--        <record id="action_my_move_out_invoice_type" model="ir.actions.act_window">-->
+<!--            <field name="name">الفواتير</field>-->
+<!--            <field name="res_model">account.move</field>-->
+<!--            <field name="view_mode">tree,kanban,form</field>-->
+<!--            <field name="view_id" ref="account.view_invoice_tree"/>-->
+<!--            <field name="search_view_id" ref="account.view_account_invoice_filter"/>-->
+<!--&lt;!&ndash;            <field name="domain">[('user_id', '=', uid)]</field>&ndash;&gt;-->
+<!--&lt;!&ndash;            <field name="context">{'default_'user_id', '=', uid}</field>&ndash;&gt;-->
+<!--        </record>-->
+
+<!--        <menuitem id="my_menu_action_move_out_invoice_type"-->
+<!--                  name="الفواتير"-->
+<!--                  groups="sales_man.my_employee_info_only"-->
+<!--                  action="action_my_move_out_invoice_type"-->
+<!--                  parent="account.menu_finance_receivables"-->
+<!--                  sequence="-1"/>-->
+
+    </data>
+</odoo>

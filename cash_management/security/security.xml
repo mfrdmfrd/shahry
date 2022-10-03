@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+       <record id="can_edit_max_limit" model="res.groups">
+           <field name="name">Can Edit MaxLimit</field>
+           <field name="implied_ids" eval="[(4, ref('base.user_admin'))]"/>
+           <field name="category_id" ref="base.module_category_hidden"/>
+       </record>
+    </data>
+</odoo>

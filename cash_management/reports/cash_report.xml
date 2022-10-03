@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <report
+            id="cash_report"
+            string="Cash Report"
+            model="cash.report.wizard"
+            report_type="qweb-pdf"
+            name="cash_management.cash_report_template"
+            file="cash_management.cash_report_template"
+            paperformat="cash_management.paperformat_falcare_landscape"
+            menu="False"/>
+
+        <template id="external_layout_header_cash_report">
+            <div t-attf-class="header o_company_#{company.id}_layout">
+                <div class="o_boxed_header">
+                    <div class="row mb8">
+                        <div class="col-8">
+                            <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" alt="Logo"/>
+                        </div>
+                        <div class="col-4 text-right mb4">
+                            <h4 class="mt0" t-field="company.report_header"/>
+                            <div name="company_address" class="mb4">
+                                <span style="font-weight: bold;text-align:center" class="company_address"
+                                      t-field="company.partner_id"
+                                      t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;address&quot;, &quot;name&quot;], &quot;no_marker&quot;: true}"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+        <template id="external_layout_footer_cash_report">
+            <div t-attf-class="footer o_boxed_footer o_company_#{company.id}_layout">
+                <div class="text-center">
+                    <ul class="list-inline">
+                        <li t-if="company.phone" class="list-inline-item">Tel:
+                            <span t-field="company.phone"/>
+                        </li>
+                        <li t-if="company.email" class="list-inline-item">Mail:
+                            <span t-field="company.email"/>
+                        </li>
+                        <li t-if="company.website" class="list-inline-item">Web:
+                            <span t-field="company.website"/>
+                        </li>
+                        <li t-if="company.vat" class="list-inline-item"><t
+                                t-esc="company.country_id.vat_label or 'Tax ID'"/>:
+                            <span t-field="company.vat"/>
+                        </li>
+                    </ul>
+                    <div t-field="company.report_footer"/>
+                    <div t-if="report_type == 'pdf'">
+                        Page:
+                        <span class="page"/>
+                        /
+                        <span class="topage"/>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <template id="external_cash_report_layout">
+            <t t-if="not company">
+                <!-- Multicompany -->
+                <t t-if="company_id">
+                    <t t-set="company" t-value="company_id"/>
+                </t>
+                <t t-elif="o and 'company_id' in o">
+                    <t t-set="company" t-value="o.company_id.sudo()"/>
+                </t>
+                <t t-else="else">
+                    <t t-set="company" t-value="res_company"/>
+                </t>
+            </t>
+            <t t-call="cash_management.external_layout_header_cash_report"/>
+            <t t-raw="0"/>
+            <t t-call="cash_management.external_layout_footer_cash_report"/>
+        </template>
+
+        <template id="cash_report_template">
+            <t t-call="web.html_container">
+                <t t-call="web.basic_layout">
+                    <t t-call="cash_management.external_cash_report_layout">
+                        <div class="page" dir="rtl" lang="ar_001" style="direction: rtl;">
+                            <div align="center">
+                                <p>
+                                    <strong>من :</strong>
+                                    <strong t-esc="date_from" widget="date"/>
+                                    <strong>الي :</strong>
+                                    <strong t-esc="date_to" widget="date"/>
+                                </p>
+                            </div>
+                            <div class="row">
+                                <div class="col-2">
+                                    <strong>العملة</strong>
+                                </div>
+                                <div class="col-2 text-right">
+                                    <span t-esc="currency"/>
+                                </div>
+                            </div>
+                            <br/>
+                            <div class="row">
+                                <div class="col-2">
+                                    <strong>كود الحساب</strong>
+                                </div>
+                                <div class="col-2 text-right">
+                                    <span t-esc="account_code"/>
+                                </div>
+                                <div class="col-2">
+                                    <strong>اسم الحساب</strong>
+                                </div>
+                                <div class="col-3 text-right">
+                                    <span t-esc="account"/>
+                                </div>
+                                <div class="col-2">
+                                    <strong>نوع الحساب</strong>
+                                </div>
+                                <div class="col-1 text-right">
+                                    <span>مدين</span>
+                                </div>
+                            </div>
+                            <br/>
+                            <table border="1px" class="table table-condensed table-bordered"
+                                   style="font-size:12px;border:1px solid #000">
+                                <thead>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">التاريخ</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">اليومية</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">عملة</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">مسلسل القيد</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">مدين</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">دائن</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">رصيد</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">البيان</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">اسم الحساب</th>
+                                        <th class="text-center" style="font-size:12px;border:1px solid #000 !important">مركز التكلفة</th>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="docs" t-as="o">
+                                            <tr style="font-size:12px;border:1px solid #000 !important">
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="o['date']"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="o['move_id']"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="'{0:,.2f}'.format(o['debit'])"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="'{0:,.2f}'.format(o['credit'])"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="'{0:,.2f}'.format(o['bal'])"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="o['name']"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="o['account_id']"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="o['analytic_account_id']"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                        <t t-foreach="docs_totals" t-as="o">
+                                            <tr style="font-size:12px;border:1px solid #000 !important">
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="'{0:,.2f}'.format(o['total_debit'])"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="'{0:,.2f}'.format(o['total_credit'])"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" valign="center" align="center">
+                                                    <span t-esc="'{0:,.2f}'.format(o['total_balance'])"/>
+                                                </td>
+                                                <td style="padding: 0;border:1px solid #000 !important" colspan="3" valign="center" align="center">
+                                                    <span>الاجمالي</span>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            <br/>
+                            <div class="row">
+                                <div class="col-3">
+                                    <strong>أمين الخزينة</strong>
+                                </div>
+                                <div class="col-3">
+                                    <strong>مراجعة</strong>
+                                </div>
+                                <div class="col-3">
+                                    <strong>المدير المالي</strong>
+                                </div>
+                                <div class="col-3">
+                                    <strong>يعتمد</strong>
+                                </div>
+                            </div>
+                            <br/>
+                            <div class="row">
+                                <div class="col-3">
+                                    <strong>تاريخ الطباعة</strong>
+                                </div>
+                                <div class="col-3 text-right">
+                                    <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M')"/>
+                                </div>
+
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+    </data>
+</odoo>

@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <report
+            id="check_out"
+            string="إذن صرف نقدية"
+            model="check.out"
+            report_type="qweb-pdf"
+            name="cash_management.check_out_template"
+            file="cash_management.check_out_template"
+            paperformat="cash_management.paperformat_falcare_landscape"
+            menu="False"/>
+
+        <template id="external_layout_header_check_bank">
+            <div t-attf-class="header o_company_#{company.id}_layout">
+                <div class="o_boxed_header">
+                    <div class="row mb8">
+                        <div class="col-8">
+                            <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" alt="Logo"/>
+                        </div>
+                        <div class="col-4 text-right mb4">
+                            <h4 class="mt0" t-field="company.report_header"/>
+                            <div name="company_address" class="mb4">
+                                <span style="font-weight: bold;text-align:center" class="company_address"
+                                      t-field="company.partner_id"
+                                      t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;address&quot;, &quot;name&quot;], &quot;no_marker&quot;: true}"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+        <template id="external_layout_footer_check_bank">
+            <div t-attf-class="footer o_boxed_footer o_company_#{company.id}_layout">
+                <div class="text-center">
+                    <ul class="list-inline">
+                        <li t-if="company.phone" class="list-inline-item">Tel:
+                            <span t-field="company.phone"/>
+                        </li>
+                        <li t-if="company.email" class="list-inline-item">Mail:
+                            <span t-field="company.email"/>
+                        </li>
+                        <li t-if="company.website" class="list-inline-item">Web:
+                            <span t-field="company.website"/>
+                        </li>
+                        <li t-if="company.vat" class="list-inline-item"><t
+                                t-esc="company.country_id.vat_label or 'Tax ID'"/>:
+                            <span t-field="company.vat"/>
+                        </li>
+                    </ul>
+                    <div t-field="company.report_footer"/>
+                    <div t-if="report_type == 'pdf'">
+                        Page:
+                        <span class="page"/>
+                        /
+                        <span class="topage"/>
+                    </div>
+                </div>
+            </div>
+        </template>
+        <template id="external_check_bank">
+            <t t-if="not company">
+                <!-- Multicompany -->
+                <t t-if="company_id">
+                    <t t-set="company" t-value="company_id"/>
+                </t>
+                <t t-elif="o and 'company_id' in o">
+                    <t t-set="company" t-value="o.company_id.sudo()"/>
+                </t>
+                <t t-else="else">
+                    <t t-set="company" t-value="res_company"/>
+                </t>
+            </t>
+            <t t-call="cash_management.external_layout_header_check_bank"/>
+            <t t-raw="0"/>
+            <t t-call="cash_management.external_layout_footer_check_bank"/>
+        </template>
+        <template id="check_out_template">
+            <t t-call="web.html_container">
+                <t t-call="web.basic_layout">
+                    <t t-call="cash_management.external_check_bank">
+                        <t t-foreach="doc_ids" t-as="o">
+                            <div class="page" dir="rtl" lang="ar_001" style="color:#000;direction: rtl">
+                                <br/>
+                                <div class="row text-center">
+                                    <div class="col-12">
+                                        <strong>إذن صرف نقدية</strong>
+                                        <span style="margin-right:20px">رقم</span>
+                                        <span style="margin-right:10px" t-esc="ref"/>
+                                    </div>
+                                </div>
+                                <br/>
+                                <div class="row text-right">
+                                    <div class="col-8">
+                                        <strong>يصرف للسادة</strong>
+                                        <span style="margin-right:10px" t-esc="partner_id"/>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>التاريخ</strong>
+                                        <span style="margin-right:10px" t-esc="payment_date"/>
+                                    </div>
+                                </div>
+                                <br/>
+                                <table style="width:100%" class="table table-condensed table-bordered">
+                                    <thead>
+                                        <th class="text-center" style="width:15%;border:1px solid #000">
+                                            القيمة
+                                        </th>
+                                        <th class="text-center" style="width:40%;border:1px solid #000">
+                                            بيان
+                                        </th>
+                                        <th class="text-center" style="width:20%;border:1px solid #000">
+                                            مركز التكلفة
+                                        </th>
+                                        <th class="text-center" style="width:25%;border:1px solid #000">
+                                            التوجيه المحاسبي
+                                        </th>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="lines" t-as="line">
+                                            <tr>
+                                                <td class="text-center" style="border:1px solid #000">
+                                                    <span t-esc="line['amount_taxed']"/>
+                                                </td>
+                                                <td class="text-center" style="border:1px solid #000">
+                                                    <span t-esc="line['description']"/>
+                                                </td>
+                                                <td class="text-center" style="border:1px solid #000">
+                                                    <span t-esc="line['analytic_account_id']"/>
+                                                </td>
+                                                <td class="text-center" style="border:1px solid #000">
+                                                    <span t-esc="line['account_id']"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                        <tr>
+                                            <td class="text-center" style="border:1px solid #000">
+                                                <span t-esc="amount"/>
+                                            </td>
+                                            <td class="text-center" style="border:1px solid #000" colspan="3">
+                                                <span t-esc="amount_text"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <br/>
+                                <div class="row text-right">
+                                    <div class="col-6 text-center">
+                                        <strong>أمين الخزينة</strong>
+                                        <br/>
+                                        <span>. . . . . . . . . . . . . . . .</span>
+                                    </div>
+                                    <div class="col-6 text-center">
+                                        <strong>اسم المستلم</strong>
+                                        <br/>
+                                        <span>. . . . . . . . . . . . . . . .</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+        <report
+            id="check_in"
+            string="إذن توريد نقدية"
+            model="check.out"
+            report_type="qweb-pdf"
+            name="cash_management.check_in_template"
+            file="cash_management.check_in_template"
+            paperformat="cash_management.paperformat_falcare_landscape"
+            menu="False"/>
+
+        <template id="check_in_template">
+            <t t-call="web.html_container">
+                <t t-call="web.internal_layout">
+                    <t t-call="cash_management.external_check_bank">
+                        <t t-foreach="doc_ids" t-as="o">
+                            <div class="page" dir="rtl" lang="ar_001" style="color:#000;direction: rtl">
+                                <br/>
+                                <div class="row text-center">
+                                    <div class="col-12">
+                                        <strong>إذن توريد نقدية</strong>
+                                        <span style="margin-right:20px">رقم</span>
+                                        <span style="margin-right:10px" t-esc="ref"/>
+                                    </div>
+                                </div>
+                                <br/>
+                                <div class="row text-right">
+                                    <div class="col-8">
+                                        <strong>نوع التوريد</strong>
+                                        <span style="margin-right:10px" t-esc="income_type"/>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>التاريخ</strong>
+                                        <span style="margin-right:10px" t-esc="payment_date"/>
+                                    </div>
+                                </div>
+                                <br/>
+                                <div class="row text-right">
+                                    <div class="col-8">
+                                        <strong>المسلسل</strong>
+                                        <span style="margin-right:10px" t-esc="income_serial"/>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>القسم</strong>
+                                        <span style="margin-right:10px" t-esc="income_department"/>
+                                    </div>
+                                </div>
+                                <br/>
+                                <div class="row text-right">
+                                    <div class="col-8">
+                                        <strong>استلمنا من</strong>
+                                        <span style="margin-right:10px" t-esc="partner_id"/>
+                                    </div>
+                                </div>
+                                <br/>
+                                <table style="width:100%" class="table table-condensed table-bordered">
+                                    <thead>
+                                        <th class="text-center" style="width:15%;border:1px solid #000">
+                                            القيمة
+                                        </th>
+                                        <th class="text-center" style="width:40%;border:1px solid #000">
+                                            بيان
+                                        </th>
+                                        <th class="text-center" style="width:20%;border:1px solid #000">
+                                            كود الحساب
+                                        </th>
+                                        <th class="text-center" style="width:25%;border:1px solid #000">
+                                            اسم الحساب
+                                        </th>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="lines" t-as="line">
+                                            <tr>
+                                                <td class="text-center" style="border:1px solid #000">
+                                                    <span t-esc="line['amount_taxed']"/>
+                                                </td>
+                                                <td class="text-center" style="border:1px solid #000">
+                                                    <span t-esc="line['description']"/>
+                                                </td>
+                                                <td class="text-center" style="border:1px solid #000">
+                                                    <span t-esc="line['analytic_account_id']"/>
+                                                </td>
+                                                <td class="text-center" style="border:1px solid #000">
+                                                    <span t-esc="line['account_id']"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                        <tr>
+                                            <td class="text-center" style="border:1px solid #000">
+                                                <span t-esc="amount"/>
+                                            </td>
+                                            <td class="text-center" style="border:1px solid #000" colspan="3">
+                                                <span t-esc="amount_text"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <br/>
+                                <div class="row text-right">
+                                    <div class="col-6 text-center">
+                                        <strong>أمين الخزينة</strong>
+                                        <br/>
+                                        <span>. . . . . . . . . . . . . . . .</span>
+                                    </div>
+                                    <div class="col-6 text-center">
+                                        <strong>المدير المالي</strong>
+                                        <br/>
+                                        <span>. . . . . . . . . . . . . . . .</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+
+    </data>
+</odoo>

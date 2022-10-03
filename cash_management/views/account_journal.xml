@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="user_custom_view_account_journal_form" model="ir.ui.view">
+            <field name="name">user_custom_view_account_journal_form</field>
+            <field name="model">account.journal</field>
+            <field name="inherit_id" ref="account.view_account_journal_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='type']" position="after">
+                    <field name="sub_type"
+                           attrs="{'invisible': [('type', '!=', 'cash')], 'required': [('type', '=', 'cash')]}"/>
+<!--                    <field name="max_limit" invisible="1"/>-->
+<!--                    <field name="responsible" invisible="1"/>-->
+                </xpath>
+                <xpath expr="//field[@name='refund_sequence']" position="before">
+                    <field name="sequence_in_code" required="0"
+                               attrs="{'invisible': [('type', '!=', 'cash')], 'required': [('type', '=', 'cash')]}"/>
+                    <label for="sequence_in_next"
+                           attrs="{'invisible': [('type', '!=', 'cash')], 'required': [('type', '=', 'cash')]}"/>
+                    <div>
+                        <field name="sequence_in_next" style="padding-right: 1.0em"
+                            attrs="{'invisible': [('type', '!=', 'cash')], 'required': [('type', '=', 'cash')]}"/>
+                         <field name="sub_seq_in"  readonly="1" attrs="{'invisible': [('type', '!=', 'cash')]}"/>
+                    </div>
+                    <field name="sequence_out_code" required="0"
+                               attrs="{'invisible': [('type', '!=', 'cash')], 'required': [('type', '=', 'cash')]}"/>
+                    <label for="sequence_out_next"
+                           attrs="{'invisible': [('type', '!=', 'cash')], 'required': [('type', '=', 'cash')]}"/>
+                    <div>
+                        <field name="sequence_out_next" style="padding-right: 1.0em"
+                               attrs="{'invisible': [('type', '!=', 'cash')], 'required': [('type', '=', 'cash')]}"/>
+                         <field name="sub_seq_out" readonly="1" attrs="{'invisible': [('type', '!=', 'cash')]}"/>
+                    </div>
+                </xpath>
+
+            </field>
+        </record>
+<!--        <record id="custom_view_account_journal_form" model="ir.ui.view">-->
+<!--            <field name="name">custom_view_account_journal_form</field>-->
+<!--            <field name="model">account.journal</field>-->
+<!--            <field name="inherit_id" ref="cash_management.user_custom_view_account_journal_form"/>-->
+<!--            <field name="groups_id" eval="[(6,0, [ref('cash_management.can_edit_max_limit')])]"/>-->
+<!--            <field name="arch" type="xml">-->
+
+<!--                <xpath expr="//field[@name='max_limit']" position="attributes">-->
+<!--                    <attribute name="readonly">0</attribute>-->
+<!--                </xpath>-->
+
+<!--            </field>-->
+<!--        </record>-->
+    </data>
+</odoo>
