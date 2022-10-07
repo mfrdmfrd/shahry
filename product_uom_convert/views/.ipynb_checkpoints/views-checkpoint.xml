@@ -1,0 +1,56 @@
+<odoo>
+  <data>
+        <record id="convert_rate_product_template_only_form_view" model="ir.ui.view">
+            <field name="name"></field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_only_form_view"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//page[@name='general_information']" position="after">
+                    <page string="Convert Rate">
+                      <field name="uom_convert_rates" context="{'default_product_id':active_id}" widget="one2many" nolabel="1" >
+                        <tree editable="bottom">
+                          <field name="product_id" invisible="1"/>
+                          <field name="uom_id"/>
+                          <field name="rate"/>
+                        </tree>
+                      </field>
+                    </page>
+                </xpath>
+
+            </field>
+        </record>
+        <record id="convert_rate_bom" model="ir.ui.view">
+            <field name="name"></field>
+            <field name="model">mrp.bom</field>
+            <field name="inherit_id" ref="mrp.mrp_bom_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='bom_line_ids']//tree//field[@name='product_qty']" position="replace">
+                     <field name = 'product_qty' readonly = '1' force_save = '1'/>
+                </xpath>
+                <xpath expr="//field[@name='bom_line_ids']//tree//field[@name='product_uom_id']" position="replace">
+                          <field name = 'product_uom_id' readonly = '1' force_save = '1'/>
+                          <field name="actual_uom_id"/>
+                          <field name="actual_qty"/>
+                </xpath>
+
+            </field>
+        </record>
+        <record id="convert_rate_mrp" model="ir.ui.view">
+            <field name="name"></field>
+            <field name="model">mrp.production</field>
+            <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='move_raw_ids']//tree//field[@name='product_uom_qty']" position="replace">
+                     <field name = 'product_uom_qty' readonly = '1' force_save = '1'/>
+                </xpath>
+                <xpath expr="//field[@name='move_raw_ids']//tree//field[@name='product_uom']" position="replace">
+                          <field name = 'product_uom' readonly = '1' force_save = '1'/>
+                          <field name="actual_uom_id"/>
+                          <field name="actual_qty"/>
+                </xpath>
+
+            </field>
+        </record>
+  </data>
+</odoo>
