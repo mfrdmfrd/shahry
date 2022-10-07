@@ -36,6 +36,22 @@
 
             </field>
         </record>
+        <record id="convert_stock_picking" model="ir.ui.view">
+            <field name="name"></field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='move_ids_without_package']//tree//field[@name='product_uom_qty']" position="replace">
+                     <field name = 'product_uom_qty'  force_save = '1'/>
+                </xpath>
+                <xpath expr="//field[@name='move_ids_without_package']//tree//field[@name='product_uom']" position="replace">
+                          <field name = 'product_uom'  force_save = '1'/>
+                          <field name="actual_uom_id"/>
+                          <field name="actual_qty"/>
+                </xpath>
+
+            </field>
+        </record>
         <record id="convert_rate_mrp" model="ir.ui.view">
             <field name="name"></field>
             <field name="model">mrp.production</field>

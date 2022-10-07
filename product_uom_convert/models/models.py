@@ -6,6 +6,8 @@ from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT, float_compare, float_roun
 from odoo.tools.float_utils import float_round
 from collections import defaultdict
 from odoo.exceptions import AccessError, UserError, ValidationError
+
+
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
@@ -24,14 +26,35 @@ class MrpBom(models.Model):
     
     actual_uom_id = fields.Many2one('uom.uom')
     actual_qty = fields.Float()
+    @api.model
+    def create(self,vals):
+        res = super().create(vals)
+        for move in res.group_id.stock_move_ids:
+            if move.raw_material_production_id and move.product_id.id == res.product_id.id:
+                res.actual_uom_id = move.actual_uom_id.id
+                res.actual_qty = move.actual_qty
+        return res
+    def _prepare_phantom_move_values(self, bom_line, product_qty, quantity_done):
+        return {
+            'picking_id': self.picking_id.id if self.picking_id else False,
+            'product_id': bom_line.product_id.id,
+            'product_uom': bom_line.product_uom_id.id,
+            'product_uom_qty': product_qty,
+            'quantity_done': quantity_done,
+            'state': 'draft',  # will be confirmed below
+            'name': self.name,
+            'bom_line_id': bom_line.id,
+            'actual_uom_id' :  bom_line.actual_uom_id.id,
+             'actual_qty' :  bom_line.actual_qty,
+        }
     @api.onchange('actual_uom_id','actual_qty','product_uom','product_id')
     def _set_quantity(self):
         if self.actual_uom_id.id == self.product_uom:
-            self.product_qty = self.actual_qty
+            self.product_uom_qty = self.actual_qty
             return 
         product_factor = self.product_id.uom_convert_rates.search([('product_id', '=', self.product_id.product_tmpl_id.id), ('uom_id', '=', self.actual_uom_id.id)])
         if not(product_factor):
-            self.product_qty = 0
+            self.product_uom_qty = 0
             return
         product_factor = product_factor[0].rate
         self.product_uom_qty = self.actual_qty / product_factor
@@ -68,7 +91,7 @@ class MrpBom(models.Model):
             'group_id': self.procurement_group_id.id,
             'propagate_cancel': self.propagate_cancel,
             'actual_uom_id' :  bom_line.actual_uom_id.id,
-             'actual_qty' :  bom_line.actual_qty.id,
+             'actual_qty' :  bom_line.actual_qty,
         }
         return data
 class MrpBom(models.Model):
