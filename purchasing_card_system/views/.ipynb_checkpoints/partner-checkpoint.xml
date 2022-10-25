@@ -11,6 +11,8 @@
                 <field name="property_account_receivable_id" position="replace">
                     <field name="property_account_receivable_id" string = 'Princible Account'/>
                     <field name = 'interest_account_id' />
+                    <field name = 'admin_account_id' />
+                    <field name = 'penalty_account_id' />
                 </field>
                 <field name="vat" position="after">
                     <field name = 'is_tax_registeerd'/>

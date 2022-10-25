@@ -18,6 +18,8 @@ class ProductTemplate(models.Model):
     buying_date = fields.Date()
     installment_product_id = fields.Many2one('product.product',required = True)
     intrest_product_id = fields.Many2one('product.product',required = True)
+    penalty_product_id = fields.Many2one('product.product',required = True)
+
     number_of_installments = fields.Integer(required = True)
     total_installments_amount = fields.Float()
     down_payment = fields.Float()
@@ -48,7 +50,44 @@ class ProductTemplate(models.Model):
     penalty_amount = fields.Float()
     installment_ids = fields.One2many('card.purchase.installment','purchase_id')
     item_ids = fields.One2many('card.purchase.item','purchase_id')
-
+    amount_due = fields.Float(compute = '_set_amount_due')
+    applied_penalty_amount = fields.Float(compute = '_set_penalty',store = True)
+    discount_rate = fields.Float()
+    amount_due_after_discount = fields.Float(compute = '_set_amount_due_after_discount')
+    invoice_created = fields.Boolean(copy = False)
+    admin_fees_invoice_created = fields.Boolean(copy = False)
+    journal_id = fields.Many2one('account.journal',required = True)
+    def apply_discount(self):
+        benifet_rate_diffrence = 0
+        for line in self.installment_ids:
+            if line.payment_status != 'paid':
+                benifet_rate_diffrence += line.benefit_rate_amount *  self.discount_rate
+                line.discount = self.discount_rate
+        vals = {
+            'move_type' : 'entry',
+            'ref' : f'{self.name} - discount entry',
+            'card_purchase_inverse_id' : self.id,
+            'line_ids' : [
+                self.get_journal_line(account_id = self.customer_id.interest_account_id,partner = self.customer_id,credit = benifet_rate_diffrence),
+                self.get_journal_line(account_id = self.intrest_product_id.property_account_income_id,partner = self.customer_id,debit = benifet_rate_diffrence),
+            ]
+        }
+        self.is_discount_created = True
+        m = self.env['account.move'].create(vals)
+        m.action_post()
+        return self.show_account_move(ids = self.inverse_entries_ids.ids)
+    @api.depends('discount_rate','amount_due')
+    def _set_amount_due_after_discount(self):
+        for rec in self:
+            rec.amount_due_after_discount = rec.amount_due * (1 - rec.discount_rate)
+    @api.depends('installment_ids')
+    def _set_amount_due(self):
+        for rec in self:
+            rec.amount_due = sum([l.due_amount for l in rec.installment_ids])
+    @api.depends('installment_ids')
+    def _set_penalty(self):
+        for rec in self:
+            rec.applied_penalty_amount = sum([l.actual_penalty_amount for l in rec.installment_ids])
     def running(self):
         self.contract_id._set_actual_credit_limit()
         if self.contract_id.actual_credit_limit < self.total_installments_amount:
@@ -75,17 +114,23 @@ class ProductTemplate(models.Model):
             'due_date' : date,
             'amount' : amount,
             'benefit_rate_amount' : benefit_rate_amount,
-            'actual_fees' : benefit_rate_amount + amount,
         }
     invoice_ids = fields.One2many('account.move','card_purchase_invoice_id')
     bill_ids = fields.One2many('account.move','card_purchase_bill_id')
+    inverse_entries_ids = fields.One2many('account.move','card_purchase_inverse_id')
+    payment_entries_ids = fields.One2many('account.move','card_purchase_payment_id')
+    is_discount_created = fields.Boolean(copy = False)
     count_bill = fields.Integer(compute = '_set_count')
     count_invoice = fields.Integer(compute = '_set_count')
+    count_inverse = fields.Integer(compute = '_set_count')
+    count_payment = fields.Integer(compute = '_set_count')
     @api.depends('invoice_ids','bill_ids')
     def _set_count(self):
         for rec in self:
             rec.count_bill = len(rec.bill_ids)
             rec.count_invoice = len(rec.invoice_ids)
+            rec.count_inverse = len(rec.inverse_entries_ids)
+            rec.count_payment = len(rec.payment_entries_ids)
     def show_account_move(self,context = {},ids = []):
         action = self.env.ref('account.action_move_out_invoice_type').sudo().read()[0]
         context.update({'create': False, 'delete': False})
@@ -102,6 +147,10 @@ class ProductTemplate(models.Model):
         return self.show_account_move(ids = self.invoice_ids.ids)
     def show_bill(self):
         return self.show_account_move(ids = self.bill_ids.ids)
+    def show_inverse(self):
+        return self.show_account_move(ids = self.inverse_entries_ids.ids)
+    def show_payment(self):
+        return self.show_account_move(ids = self.payment_entries_ids.ids)
     def create_bill(self):
         vals = {
             'partner_id' : self.vendor_id.id,
@@ -123,7 +172,7 @@ class ProductTemplate(models.Model):
             'account_id' : account_id.id,
             'debit' : debit,
             'credit' : credit,
-            'partner_id' : partner.id
+            'partner_id' : partner.id if partner else False
         })
     def create_invoice(self):
         vals = {
@@ -137,22 +186,33 @@ class ProductTemplate(models.Model):
                 self.get_journal_line(account_id = self.intrest_product_id.property_account_income_id,partner = self.customer_id,credit = self.benefit_rate_amount),
             ]
         }
-        self.env['account.move'].create(vals)
+        m = self.env['account.move'].create(vals)
+        m.action_post()
+        self.invoice_created = True
         return self.show_account_move(ids = self.invoice_ids.ids)
     admin_fees_amount = fields.Float()
     admin_fees_product_id = fields.Many2one('product.product',required = True)
     def create_admin_fees_invoice(self):
         vals = {
-            'move_type' : 'entry',
+            'move_type' : 'out_invoice',
             'ref' : f'{self.name} - admin fees invoice',
             'card_purchase_invoice_id' : self.id,
-            'line_ids' : [
-                self.get_journal_line(account_id = self.vendor_id.property_account_payable_id,partner = self.vendor_id,debit = self.admin_fees_amount),
-                self.get_journal_line(account_id = self.admin_fees_product_id.property_account_income_id,partner = self.vendor_id,credit = self.admin_fees_amount),
+            'partner_id' : self.customer_id.id,
+            'partner_account_id' : self.customer_id.admin_account_id.id,
+            'invoice_line_ids' : [
+                (0,0,{
+                    'product_id' : self.admin_fees_product_id.id,
+                    'quantity' : 1,
+                    'price_unit' : self.admin_fees_amount
+                })
             ]
         }
-        self.env['account.move'].create(vals)
+        m = self.env['account.move'].create(vals)
+        m.action_post()
+        self.admin_fees_invoice_created = True
         return self.show_account_move(ids = self.invoice_ids.ids)
+    
+
 
 class ProductTemplate(models.Model):
     _name = 'card.purchase.installment'
@@ -160,7 +220,17 @@ class ProductTemplate(models.Model):
     due_date = fields.Date()
     amount = fields.Float()
     benefit_rate_amount = fields.Float()
-    actual_fees = fields.Float()
+    actual_benefit_rate_amount = fields.Float(compute = '_apply_discount',store = True)
+    discount = fields.Float(default = 0)
+    @api.depends('amount','benefit_rate_amount','discount')
+    def _apply_discount(self):
+        for rec in self:
+            rec.actual_benefit_rate_amount = rec.benefit_rate_amount * (1 - rec.discount)
+    actual_fees = fields.Float(compute = '_set_actual_fees',store = True)
+    @api.depends('amount','actual_benefit_rate_amount')
+    def _set_actual_fees(self):
+        for rec in self:
+            rec.actual_fees = rec.amount + rec.actual_benefit_rate_amount
     actual_amount = fields.Float(compute = '_set_actual_amount')
     last_penalty_applied_date = fields.Date()
     penalty_applied_ids = fields.One2many('card.purchase.penalty','line_id')
@@ -190,52 +260,119 @@ class ProductTemplate(models.Model):
                     self.env['card.purchase.penalty'].create(penalty_vals)
                     rec.last_penalty_applied_date = today
     penalty_amount = fields.Float(compute = '_set_penalty_amount',store = True)
-    actual_penalty_amount = fields.Float()
-    def wave_penalty(self):
-        self.actual_penalty_amount = 0
-    @api.depends('penalty_applied_ids')
+    actual_penalty_amount = fields.Float(compute = '_set_penalty_amount',store = True)
+
+    @api.depends('penalty_applied_ids.amount','penalty_applied_ids.actual_amount','penalty_applied_ids.is_waved')
     def _set_penalty_amount(self):
         for rec in self:
             rec.penalty_amount = sum([p.amount for p in rec.penalty_applied_ids])
-            rec.actual_penalty_amount = rec.penalty_amount
+            rec.actual_penalty_amount = sum([p.actual_amount for p in rec.penalty_applied_ids])
     @api.depends('actual_fees','due_date','actual_penalty_amount')
     def _set_actual_amount(self):
         for rec in self:
             today = fields.Date().today()
             rec.actual_amount = rec.actual_fees + rec.actual_penalty_amount
     payment_ids = fields.One2many('account.payment','installment_id')
-    payment_reference = fields.Char(compute = 'payment_changes')
-    paid_amount = fields.Float(compute = 'payment_changes')
-    due_amount = fields.Float(compute = 'payment_changes')
-    payment_status = fields.Selection(selection = [('not_paid','Not Paid'),('partial','partially paid'),('paid','Paid')],compute = 'payment_changes')
-    @api.depends('payment_ids.state','payment_ids.amount','payment_ids.name','payment_ids.payment_type')
-    def payment_changes(self):
-        for rec in self:
-            rec.payment_reference = ','.join([p.name for p in rec.payment_ids if p.state == 'posted' and p.payment_type == 'inbound'])
-            sum_paid = sum([p.amount for p in rec.payment_ids if p.state == 'posted' and p.payment_type == 'inbound'])
-            rec.paid_amount = sum_paid if sum_paid <= rec.actual_amount else rec.actual_amount
-            rec.due_amount = rec.actual_amount - rec.paid_amount
-            if rec.due_amount == 0:
-                rec.payment_status = 'paid'
-            elif rec.due_amount == rec.actual_amount:
-                rec.payment_status = 'not_paid'
-            else:
-                rec.payment_status = 'partial'
+    payment_reference = fields.Char()
+    paid_amount = fields.Float()
+    due_amount = fields.Float()
+    payment_status = fields.Selection(selection = [('not_paid','Not Paid'),('partial','partially paid'),('paid','Paid')])
+    def create_benifet_invoice(self):
+        vals = {
+            'move_type' : 'out_invoice',
+            'ref' : f'{self.purchase_id.name} {self.due_date} installment - benifete  invoice',
+            'card_purchase_invoice_id' : self.purchase_id.id,
+            'partner_id' : self.purchase_id.customer_id.id,
+            'partner_account_id' : self.purchase_id.customer_id.interest_account_id.id,
+            'invoice_line_ids' : [
+                (0,0,{
+                    'product_id' : self.purchase_id.intrest_product_id.id,
+                    'quantity' : 1,
+                    'price_unit' : self.actual_benefit_rate_amount
+                })
+            ]
+        }
+        m = self.env['account.move'].create(vals)
+        m.action_post()
+    def create_benifet_inverse_entry(self):
+        vals = {
+            'move_type' : 'entry',
+            'ref' : f'{self.purchase_id.name} {self.due_date} installment  - benifete inverse entry',
+            'card_purchase_inverse_id' : self.purchase_id.id,
+            'line_ids' : [
+                self.purchase_id.get_journal_line(account_id = self.purchase_id.customer_id.interest_account_id,partner = self.purchase_id.customer_id,credit = self.actual_benefit_rate_amount),
+                self.purchase_id.get_journal_line(account_id = self.purchase_id.intrest_product_id.property_account_income_id,partner = self.purchase_id.customer_id,debit = self.actual_benefit_rate_amount),
+            ]
+        }
+        m = self.env['account.move'].create(vals)
+        m.action_post()
+    def create_penalty_invoice(self):
+        vals = {
+            'move_type' : 'out_invoice',
+            'ref' : f'{self.purchase_id.name} {self.due_date} installment - penalty  invoice',
+            'card_purchase_invoice_id' : self.purchase_id.id,
+            'partner_id' : self.purchase_id.customer_id.id,
+            'partner_account_id' : self.purchase_id.customer_id.penalty_account_id.id,
+            'invoice_line_ids' : [
+                (0,0,{
+                    'product_id' : self.purchase_id.penalty_product_id.id,
+                    'quantity' : 1,
+                    'price_unit' : self.actual_penalty_amount
+                })
+            ]
+        }
+        m = self.env['account.move'].create(vals)
+        m.action_post()
+    def create_payment_entry(self):
+        vals = {
+            'move_type' : 'entry',
+            'ref' : f'{self.purchase_id.name} {self.due_date} installment  - payment entry',
+            'card_purchase_payment_id' : self.purchase_id.id,
+        }
+        interest = self.actual_benefit_rate_amount
+        principle = self.amount
+        penalty = self.actual_penalty_amount
+        lines = [
+            self.purchase_id.get_journal_line(account_id = self.purchase_id.journal_id.default_account_id,partner = False,debit = interest + penalty),
+            self.purchase_id.get_journal_line(account_id = self.purchase_id.vendor_id.property_account_payable_id,partner = self.purchase_id.vendor_id,debit = principle),
+            self.purchase_id.get_journal_line(account_id = self.purchase_id.customer_id.property_account_receivable_id,partner = self.purchase_id.customer_id,credit = principle),
+            self.purchase_id.get_journal_line(account_id = self.purchase_id.customer_id.interest_account_id,partner = self.purchase_id.customer_id,credit = interest),
+        ]
+        if penalty:
+            lines.append(self.purchase_id.get_journal_line(account_id = self.purchase_id.customer_id.penalty_account_id,partner = self.purchase_id.customer_id,credit = penalty))
+        vals['line_ids'] = lines
+        move = self.env['account.move'].create(vals)
+        self.payment_reference = move.name 
+        move.action_post()
+
     def pay(self):
-        action = self.env.ref('account.action_account_payments').sudo().read()[0]
-        action['context'] = {'default_payment_type': 'inbound','default_partner_type': 'customer','default_move_journal_types': ('bank', 'cash'),'default_partner_id' : self.purchase_id.customer_id.id,'default_amount' : self.due_amount,'default_installment_id' : self.id}
-        form_view = [(self.env.ref('account.view_account_payment_form').id, 'form')]
-        action['views'] = form_view 
-        return action
+        rec = self
+        self.create_benifet_invoice()
+        self.create_benifet_inverse_entry()
+        if self.actual_penalty_amount:
+            self.create_penalty_invoice()
+        self.create_payment_entry()
+        rec.paid_amount = rec.actual_amount
+        rec.due_amount = 0 
+        rec.payment_status = 'paid'
 class ProductTemplate(models.Model):
     _name = 'card.purchase.penalty'
     date = fields.Date()
     amount = fields.Float()
+    actual_amount = fields.Float(compute = '_set_actual_amount',store = True)
     line_id = fields.Many2one('card.purchase.installment')
+    is_waved = fields.Boolean()
+    @api.depends('is_waved','actual_amount')
+    def _set_actual_amount(self):
+        for rec in self:
+            rec.actual_amount = rec.amount if not(rec.is_waved) else 0
+    def wave_penalty(self):
+        self.is_waved = True
 class ProductTemplate(models.Model):
     _name = 'card.purchase.item'
     product_id = fields.Many2one('product.product',required = True)
     category_id = fields.Many2one('product.category',required = True)
+    internal_category_id = fields.Many2one('product.category',required = True)
     price = fields.Float(required = True)
     purchase_id = fields.Many2one('card.purchase')
 

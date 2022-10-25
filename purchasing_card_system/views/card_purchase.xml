@@ -23,6 +23,8 @@
                 <field name="installment_type" />                
                 <field name="start_date" />                
                 <field name = 'state'/>                
+                <field name = 'applied_penalty_amount'/>                
+
             </tree>
         </field>
     </record>
@@ -38,6 +40,10 @@
                                 <tree editable = 'bottom'>
                                     <field name = 'date'/>
                                     <field name = 'amount'/>
+                                    <field name = 'actual_amount'/>
+
+                                    <button name = 'wave_penalty' string = 'Wave Penalty'  type = 'object'/>
+
                                 </tree>
                             </field>
                         </page>
@@ -52,10 +58,15 @@
         <field name="arch" type="xml">
             <form string="Security Worker">
                 <header>
+                    <field name = 'admin_fees_invoice_created' invisible = '1'/>
+                    <field name = 'invoice_created' invisible = '1'/>
+                    <field name = 'is_discount_created' invisible = '1'/>
+
                     <button name = 'running' string = 'Run' type = 'object' states = 'draft'/>
-                    <button name = 'create_bill' string = 'Create Bill' type = 'object' states = 'running'/>
-                    <button name = 'create_invoice' string = 'Create Invoice' type = 'object' states = 'running'/>
-                    <button name = 'create_admin_fees_invoice' string = 'Create Admin Fees Invoice' type = 'object' states = 'running'/>
+                    <button name = 'create_bill' string = 'Create Bill' type = 'object' attrs="{'invisible': ['|',('count_bill', '!=', 0),('state','!=','running')]}"/>
+                    <button name = 'create_invoice' string = 'Create Invoice' type = 'object' attrs="{'invisible': ['|',('invoice_created', '=',True),('state','!=','running')]}"/>
+                    <button name = 'create_admin_fees_invoice' string = 'Create Admin Fees Invoice' type = 'object' attrs="{'invisible': ['|',('admin_fees_invoice_created', '=',True),('state','!=','running')]}"/>
+                    <button name = 'apply_discount' string = 'Apply Discount' type = 'object' attrs="{'invisible': ['|',('is_discount_created', '=', True),('state','!=','running')]}"/>
                     <field name = 'state' widget = 'statusbar'/>
                 </header>
                 <sheet>
@@ -65,6 +76,12 @@
                         </button>
                        <button class="oe_stat_button" type="object" icon="fa-book" name="show_invoice"  attrs="{'invisible': [('count_invoice', '=', 0)]}">
                             <field name="count_invoice" widget="statinfo"  string="Invoices"/>
+                        </button>
+                       <button class="oe_stat_button" type="object" icon="fa-book" name="show_inverse"  attrs="{'invisible': [('count_inverse', '=', 0)]}">
+                            <field name="count_inverse" widget="statinfo"  string="Inverse Entries"/>
+                        </button>
+                       <button class="oe_stat_button" type="object" icon="fa-book" name="show_payment"  attrs="{'invisible': [('count_payment', '=', 0)]}">
+                            <field name="count_payment" widget="statinfo"  string="Payment Entries"/>
                         </button>
                     </div>
                     <group>
@@ -81,7 +98,9 @@
                                 <field name="installment_product_id" attrs = "{'readonly':[('state','!=','draft')]}"/> 
                                 <field name="intrest_product_id" attrs = "{'readonly':[('state','!=','draft')]}"/> 
                                 <field name="admin_fees_product_id" attrs = "{'readonly':[('state','!=','draft')]}"/> 
-                             </group>
+                                <field name="penalty_product_id" attrs = "{'readonly':[('state','!=','draft')]}"/> 
+                                <field name="journal_id" attrs = "{'readonly':[('state','!=','draft')]}"/> 
+                        </group>
                              <group>                
                                 <field name="total_installments_amount" attrs = "{'readonly':[('state','!=','draft')]}"/>    
                                 <field name="down_payment" attrs = "{'readonly':[('state','!=','draft')]}"/>
@@ -92,7 +111,9 @@
                                 <field name="benefit_rate_amount" />  
                                 <field name="installment_amount" />                 
                                 <field name="penalty_amount" attrs = "{'readonly':[('state','!=','draft')]}"/> 
-                                <field name="admin_fees_amount" attrs = "{'readonly':[('state','!=','draft')]}"/> 
+                                <field name="admin_fees_amount" attrs = "{'readonly':[('state','!=','draft')]}"/>
+                                 <field name="amount_due" />
+                                 <field name="discount_rate" widget = 'percentage'  attrs = "{'readonly':[('is_discount_created', '=', True)]}"/>
                             </group>
                     </group>
                     <notebook >
@@ -100,8 +121,10 @@
                             <field name = 'installment_ids' readonly = '1'>
                                 <tree editable = 'bottom'>
                                     <field name = 'due_date'/>
-                                    <field name = 'amount'/>
+                                    <field name = 'amount' string = 'Principle Amount'/>
                                     <field name = 'benefit_rate_amount'/>
+                                    <field name = 'discount' widget = 'percentage'/>
+                                    <field name = 'actual_benefit_rate_amount'/>
                                     <field name = 'actual_fees'/>
                                     <field name = 'penalty_amount'/>
                                     <field name = 'actual_penalty_amount'/>
@@ -111,7 +134,7 @@
                                     <field name = 'due_amount'/>
                                     <field name = 'payment_status'/>
                                     <button name = 'pay' string = 'Pay' attrs = "{'invisible' : [('payment_status','=','paid')]}" type = 'object'/>
-                                    <button name = 'wave_penalty' string = 'Wave Penalty' attrs = "{'invisible' : [('payment_status','=','paid')]}" type = 'object'/>
+
                                     <button name = 'show_penalty' string = 'Show Penalty' attrs = "{'invisible' : ['|',('payment_status','=','paid'),('penalty_amount','=',0)]}" type = 'object'/>
                                 </tree>
                             </field>
@@ -121,6 +144,7 @@
                                 <tree editable = 'bottom'>
                                     <field name = 'product_id'/>
                                     <field name = 'category_id'/>
+                                    <field name = 'internal_category_id'/>
                                     <field name = 'price'/>
                                 </tree>
                             </field>
